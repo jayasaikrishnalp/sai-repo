@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker Terminal</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    iframe {
+      width: 90%;
+      height: 600px;
+      border: 1px solid #ccc;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Docker Terminal</h1>
+  <button id="loadTerminal">Load Terminal</button>
+  <iframe id="terminalFrame" src="" title="Docker Terminal"></iframe>
+
+  <script>
+    const loadTerminalBtn = document.getElementById('loadTerminal');
+    const terminalFrame = document.getElementById('terminalFrame');
+
+    loadTerminalBtn.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/get-terminal');
+        if (response.ok) {
+          const data = await response.json();
+          terminalFrame.src = data.url;
+        } else {
+          alert('Failed to load terminal');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+      }
+    });
+  </script>
+</body>
+</html>

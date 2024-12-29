@@ -7,11 +7,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // API to get the ttyd terminal URL
 app.get('/get-terminal', (req, res) => {
-  const terminalUrl = `http://localhost:7681`; // ttyd app URL
+  const terminalUrl = `http://${req.hostname}:7681`; // Dynamically use the request's hostname
   res.json({ url: terminalUrl });
 });
 
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`Node app running on http://localhost:${PORT}`);
+// Use environment variable or default to 3000
+const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0'; // Bind to all network interfaces
+
+app.listen(PORT, HOST, () => {
+  console.log(`Node app running on http://${HOST}:${PORT}`);
 });

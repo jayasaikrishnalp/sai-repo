@@ -1,17 +1,22 @@
-# Use Node.js as the base image
+# Use Node.js as base image
 FROM node:16-alpine
 
-# Set the working directory
+# Install dependencies for node-gyp
+RUN apk add --no-cache python3 make g++
+
+# Set working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and install dependencies
+# Copy package files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Copy the application code
+# Copy application files
 COPY . .
 
-# Expose port 3000
+# Expose port
 EXPOSE 3000
 
 # Start the application

@@ -1,28 +1,24 @@
+version: "3.8"
 services:
   node-app:
     build:
       context: ./node-app
     ports:
       - "3000:3000"
-    volumes:
-      - ./node-app:/usr/src/app
-      - /usr/src/app/node_modules
     depends_on:
       - ttyd-app
     environment:
-      - NODE_ENV=development
+      - DOCKER_HOST=tcp://ttyd-app:2375
     networks:
       - lab-network
 
   ttyd-app:
     build:
       context: ./ttyd-app
-      dockerfile: Dockerfile
-    privileged: true
     ports:
       - "7681:7681"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - "2375:2375"
+    privileged: true
     networks:
       - lab-network
 

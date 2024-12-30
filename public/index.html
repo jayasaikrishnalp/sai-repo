@@ -1,0 +1,99 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Docker Labs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded shadow">
+                <h2 class="text-xl font-bold mb-4">Labs</h2>
+                <div id="labList"></div>
+                <div id="labDetails" class="mt-4"></div>
+                <button id="validateBtn" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hidden">
+                    Validate Lab
+                </button>
+            </div>
+            <div class="bg-white p-4 rounded shadow">
+                <h2 class="text-xl font-bold mb-4">Terminal</h2>
+                <iframe id="terminal" style="width: 100%; height: 400px; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLab = null;
+
+        async function loadTerminal() {
+            const response = await fetch('/get-terminal');
+            const data = await response.json();
+            document.getElementById('terminal').src = data.url;
+        }
+
+        async function loadLabs() {
+            const response = await fetch('/labs');
+            const labs = await response.json();
+            const labList = document.getElementById('labList');
+            labList.innerHTML = labs.map(lab => `
+                <div class="mb-2">
+                    <button onclick="showLab('${lab.id}')" class="text-blue-500 hover:underline">
+                        ${lab.title}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function showLab(labId) {
+            const response = await fetch(`/labs/${labId}`);
+            const lab = await response.json();
+            currentLab = lab;
+            
+            const labDetails = document.getElementById('labDetails');
+            labDetails.innerHTML = `
+                <h3 class="font-bold">${lab.title}</h3>
+                <p class="mb-2">${lab.description}</p>
+                <div class="space-y-2">
+                    ${lab.tasks.map(task => `
+                        <div class="p-2 bg-gray-50 rounded">
+                            <p>${task.description}</p>
+                            <code class="block bg-gray-100 p-1 mt-1">${task.command}</code>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById('validateBtn').classList.remove('hidden');
+        }
+
+        async function validateLab() {
+            if (!currentLab) return;
+            
+            const response = await fetch(`/labs/${currentLab.id}/validate`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+            
+            const labDetails = document.getElementById('labDetails');
+            labDetails.innerHTML += `
+                <div class="mt-4 ${result.passed ? 'text-green-500' : 'text-red-500'}">
+                    ${result.passed ? '✅ All tasks completed!' : '❌ Some tasks incomplete'}
+                    <div class="mt-2">
+                        ${result.tasks.map(task => `
+                            <div class="flex items-center space-x-2">
+                                <span>${task.passed ? '✓' : '×'}</span>
+                                <span>${task.description}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        document.getElementById('validateBtn').addEventListener('click', validateLab);
+        
+        loadTerminal();
+        loadLabs();
+    </script>
+</body>
+</html>

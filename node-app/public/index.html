@@ -1,47 +1,291 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Docker Terminal</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    iframe {
-      width: 90%;
-      height: 600px;
-      border: 1px solid #ccc;
-      margin-top: 20px;
-    }
-  </style>
-</head>
-<body>
-  <h1>Docker Terminal</h1>
-  <button id="loadTerminal">Load Terminal</button>
-  <iframe id="terminalFrame" src="" title="Docker Terminal"></iframe>
-
-  <script>
-    const loadTerminalBtn = document.getElementById('loadTerminal');
-    const terminalFrame = document.getElementById('terminalFrame');
-
-    loadTerminalBtn.addEventListener('click', async () => {
-      try {
-        const response = await fetch('/get-terminal');
-        if (response.ok) {
-          const data = await response.json();
-          terminalFrame.src = data.url;
-        } else {
-          alert('Failed to load terminal');
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Interactive Labs</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better visual hierarchy */
+        .lab-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
         }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('An error occurred');
-      }
-    });
-  </script>
+
+        .lab-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .task-card {
+            border: 1px solid #f3f4f6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 10px;
+            background-color: #f9fafb;
+        }
+
+        .command-box {
+            background-color: #1f2937;
+            color: #e5e7eb;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .copy-button {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #4b5563;
+            color: #e5e7eb;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .copy-button:hover {
+            background-color: #6b7280;
+        }
+
+        .objective-list {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 12px 16px;
+            margin: 12px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .hints-section {
+            background-color: #fffbeb;
+            border: 1px solid #fbbf24;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .validation-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root" class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header section -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Docker Interactive Labs</h1>
+                <p class="text-gray-600 mt-2">Learn Docker hands-on with interactive exercises</p>
+            </div>
+            <button 
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                onclick="window.open('http://100.27.202.203:7681', '_blank')"
+            >
+                Open Terminal
+            </button>
+        </div>
+
+        <!-- Labs container -->
+        <div id="labs-container"></div>
+    </div>
+
+    <script>
+        // React components and application logic
+        function LabCard({ lab, onValidate }) {
+            const [expanded, setExpanded] = React.useState(false);
+            const [validationStatus, setValidationStatus] = React.useState(null);
+
+            return React.createElement('div', { className: 'lab-card' },
+                // Lab header
+                React.createElement('div', { className: 'flex justify-between items-start' },
+                    React.createElement('div', { className: 'flex-1' },
+                        React.createElement('h2', { className: 'text-2xl font-semibold text-gray-800' }, lab.title),
+                        React.createElement('p', { className: 'text-gray-600 mt-1' }, lab.description)
+                    ),
+                    React.createElement('button', {
+                        className: 'ml-4 text-blue-600 hover:text-blue-800',
+                        onClick: () => setExpanded(!expanded)
+                    }, expanded ? 'Hide Details' : 'Show Details')
+                ),
+
+                // Objectives section
+                expanded && React.createElement('div', { className: 'objective-list mt-4' },
+                    React.createElement('h3', { className: 'font-semibold text-blue-800 mb-2' }, 'Learning Objectives:'),
+                    React.createElement('ul', { className: 'list-disc list-inside text-blue-900' },
+                        lab.objectives.map(objective =>
+                            React.createElement('li', { key: objective }, objective)
+                        )
+                    )
+                ),
+
+                // Tasks section
+                expanded && React.createElement('div', { className: 'mt-6 space-y-4' },
+                    lab.tasks.map(task =>
+                        React.createElement(TaskCard, { key: task.id, task })
+                    )
+                ),
+
+                // Validation section
+                expanded && React.createElement('div', { className: 'mt-6 flex items-center justify-between' },
+                    React.createElement('button', {
+                        className: 'bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors',
+                        onClick: async () => {
+                            const status = await validateLab(lab.id);
+                            setValidationStatus(status);
+                        }
+                    }, 'Validate Progress'),
+                    validationStatus && React.createElement('div', {
+                        className: `validation-status ${validationStatus.passed ? 'status-completed' : 'status-pending'}`
+                    }, validationStatus.passed ? 'All tasks completed!' : 'Some tasks incomplete')
+                )
+            );
+        }
+
+        function TaskCard({ task }) {
+            return React.createElement('div', { className: 'task-card' },
+                React.createElement('h3', { className: 'font-semibold text-lg text-gray-800' }, task.title),
+                React.createElement('p', {className: 'text-gray-600 mt-2' 
+            }, task.description),
+                
+                // Command section with copy functionality
+                React.createElement('div', { className: 'command-box' },
+                    React.createElement('code', null, task.command),
+                    React.createElement('button', {
+                        className: 'copy-button',
+                        onClick: () => {
+                            navigator.clipboard.writeText(task.command);
+                            // Show a temporary "Copied!" message
+                            const button = event.target;
+                            const originalText = button.textContent;
+                            button.textContent = 'Copied!';
+                            setTimeout(() => {
+                                button.textContent = originalText;
+                            }, 2000);
+                        }
+                    }, 'Copy')
+                ),
+
+                // Explanation section
+                React.createElement('div', { className: 'mt-4' },
+                    React.createElement('h4', { className: 'font-semibold text-gray-700' }, 'Understanding the Command:'),
+                    React.createElement('p', { className: 'text-gray-600 mt-1' }, task.explanation)
+                ),
+
+                // Hints section
+                task.hints && React.createElement('div', { className: 'hints-section' },
+                    React.createElement('h4', { className: 'font-semibold text-yellow-800 mb-2' }, 'Helpful Hints:'),
+                    React.createElement('ul', { className: 'list-disc list-inside text-yellow-900' },
+                        task.hints.map((hint, index) =>
+                            React.createElement('li', { key: index }, hint)
+                        )
+                    )
+                )
+            );
+        }
+
+        // Function to validate lab progress
+        async function validateLab(labId) {
+            try {
+                const response = await fetch(`/labs/${labId}/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Validation request failed');
+                }
+
+                const result = await response.json();
+                
+                // Show detailed feedback for each task
+                const taskResults = result.tasks.map(task => {
+                    return `${task.title}: ${task.passed ? '✅ Completed' : '❌ Incomplete'}${task.message ? ` - ${task.message}` : ''}`;
+                }).join('\n');
+
+                // Display feedback in a more user-friendly way
+                if (result.passed) {
+                    alert('🎉 Congratulations! All tasks completed successfully!\n\nDetails:\n' + taskResults);
+                } else {
+                    alert('Some tasks still need attention:\n\n' + taskResults);
+                }
+
+                return result;
+            } catch (error) {
+                console.error('Error during validation:', error);
+                alert('An error occurred while validating the lab. Please try again.');
+                return null;
+            }
+        }
+
+        // Function to fetch and display labs
+        async function loadLabs() {
+            try {
+                const response = await fetch('/labs');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch labs');
+                }
+
+                const labs = await response.json();
+                const container = document.getElementById('labs-container');
+                
+                ReactDOM.render(
+                    React.createElement('div', { className: 'space-y-6' },
+                        labs.map(lab =>
+                            React.createElement(LabCard, {
+                                key: lab.id,
+                                lab: lab
+                            })
+                        )
+                    ),
+                    container
+                );
+            } catch (error) {
+                console.error('Error loading labs:', error);
+                const container = document.getElementById('labs-container');
+                
+                ReactDOM.render(
+                    React.createElement('div', { className: 'text-center py-8' },
+                        React.createElement('p', { className: 'text-red-600' },
+                            'Error loading labs. Please refresh the page to try again.'
+                        )
+                    ),
+                    container
+                );
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLabs();
+        });
+    </script>
 </body>
 </html>
